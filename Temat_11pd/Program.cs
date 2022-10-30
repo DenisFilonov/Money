@@ -63,7 +63,7 @@ namespace Temat_11pd
         }
         public override string ToString()
         {
-            return $"Grivna: {_grivna} Kopeyka: {_kopeyka}";
+            return $"Grivna: {Grivna} Kopeyka: {Kopeyka}";
         }
         public int CountKopeyka()
         {
@@ -76,15 +76,53 @@ namespace Temat_11pd
             mn.Kopeyka = val % 100;
             return mn;
         }
-        private static Money CheckKopeyka(Money m)
+        private static bool IsDoubleConvertableToInt(double v)
         {
-            if (m.Kopeyka >= 100)
+            string s = v.ToString();
+            if (s.IndexOf('.') > 10)
             {
-                m.Kopeyka -= 100;
-                m.Grivna++;
+                return false;
             }
-            return m;
+            else if (s.IndexOf('.') <= 10) // -2147483648 до 2147483647 
+            {
+                string str = s.Substring(0, s.IndexOf('.'));
+                double b = double.Parse(str);
+                if (b < 2147483647)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return false;
         }
+        public static Money DoubleToMoney(double v)
+        {
+            if (v <= 0)
+            {
+                throw new Exception("\tThe value cann't be zero or less!\n");
+            }
+            if (IsDoubleConvertableToInt(v))
+            {
+                int a = (int)v; //Целая часть до 10 значений
+                int b = (int)((v % 1) * 100); //Дробная - 2 числа
+                int c = a * 100 + b;
+                Money m = ToGrivna(c);
+                return m;
+            }
+            throw new Exception("\tCann't convert this double value!\n");
+        }
+        //private static Money CheckKopeyka(Money m)
+        //{
+        //    if (m.Kopeyka >= 100)
+        //    {
+        //        m.Kopeyka -= 100;
+        //        m.Grivna++;
+        //    }
+        //    return m;
+        //}
         //=============================================================================2
         public static bool operator >(Money m1, Money m2)
         {
@@ -111,14 +149,17 @@ namespace Temat_11pd
             return !(m1 == m2);
         }
         //=============================================================================3
-        public static Money operator +(Money m, int n)
+        public static Money operator +(Money m, int n) 
         {
             if (n < 0)
             {
                 throw new Exception("\tIt's undesirable to add a negative value! Use subtraction.\n");
             }
-            Money mn = new Money { Grivna = m.Grivna, Kopeyka = m.Kopeyka + n };
-            CheckKopeyka(mn);
+            //Money mn = new Money { Grivna = m.Grivna, Kopeyka = m.Kopeyka + n };
+            //CheckKopeyka(mn);
+            int a = m.CountKopeyka();
+            a += n;
+            Money mn = ToGrivna(a);
             return mn;
         }
         public static Money operator -(Money m, int n)
@@ -127,13 +168,22 @@ namespace Temat_11pd
             {
                 throw new Exception("\tIt's undesirable to subtract a negative value! Use addition.\n");
             }
-            int tmp = m.Kopeyka - n;
-            if (tmp < 0)
+            //int tmp = m.Kopeyka - n;
+            //if (tmp < 0)
+            //{
+            //    tmp += 100;
+            //    m.Grivna--;
+            //}
+            //return new Money { Grivna = m.Grivna, Kopeyka = tmp };
+
+            int a = m.CountKopeyka();
+            if (a < n)
             {
-                tmp += 100;
-                m.Grivna--;
+                throw new Exception("\tInsufficient funds on the account!\n");
             }
-            return new Money { Grivna = m.Grivna, Kopeyka = tmp };
+            a -= n;
+            Money mn = ToGrivna(a);
+            return mn;
         }
         public static Money operator *(Money m, int n)
         {
@@ -151,31 +201,134 @@ namespace Temat_11pd
             buf = ToGrivna(tmp);
             return buf;
         }
+        //==================================================
+        public static Money operator +(Money m, double d)
+        {
+            if (d < 0)
+            {
+                throw new Exception("\tIt's undesirable to add a negative value! Use subtraction.\n");
+            }
+            Money mn = DoubleToMoney(d);
+            return m + mn;
+        }
+        public static Money operator -(Money m, double d)
+        {
+            if (d < 0)
+            {
+                throw new Exception("\tIt's undesirable to add a negative value! Use subtraction.\n");
+            }
+            Money mn = DoubleToMoney(d);
+            return m - mn;
+        }
+        public static Money operator *(Money m, double d)
+        {
+            int a = (int)d; //Целая часть до 10 значений
+            int b = (int)((d % 1) * 100); //Дробная - 2 числа интересует
+
+            int c = (m.CountKopeyka() * a) + ((m.CountKopeyka() * b)/100);
+            Money mn = ToGrivna(c);
+            return mn;
+        }
+        public static Money operator /(Money m, double d)
+        {
+            int a = (int)d; //Целая часть до 10 значений
+            int b = (int)((d % 1) * 100); //Дробная - 2 числа интересует
+
+            int c = m.CountKopeyka() - ((m.CountKopeyka() / a) + ((m.CountKopeyka() / (b / 10)) / 2));
+            c /= 100;
+            Money mn = ToGrivna(c);
+            return mn;
+        }
+        //==================================================
+        public static Money operator +(Money m1, Money m2)
+        {
+            int a = m1.CountKopeyka();
+            int b = m2.CountKopeyka();
+            Money m = ToGrivna(a + b);
+            return m;
+        }
+        public static Money operator -(Money m1, Money m2)
+        {
+            int a = m1.CountKopeyka();
+            int b = m2.CountKopeyka();
+
+            if (a < b)
+            {
+                throw new Exception("\tFirst object is less than second!\n");
+            }
+            int c = a - b;
+            Money m = ToGrivna(c);
+            return m;
+        }
+        //==================================================
         public static Money operator ++(Money m)
         {
-            m.Kopeyka++;
-            CheckKopeyka(m);
-            return m;
+            int a = m.CountKopeyka() + 1;
+            Money mn = ToGrivna(a);
+            return mn;
         }
         public static Money operator --(Money m)
         {
-            int tmp = m.Kopeyka - 1;
-            if (tmp < 0)
+            //int tmp = m.Kopeyka - 1;
+            //if (tmp < 0)
+            //{
+            //    tmp += 100;
+            //    m.Grivna--;
+            //    m.Kopeyka = tmp;
+            //}
+            int a = m.CountKopeyka();
+            if (a == 0)
             {
-                tmp += 100;
-                m.Grivna--;
-                m.Kopeyka = tmp;
+                throw new Exception("\tInsufficient funds on the account!\n");
             }
-            return m; //Пнями и кочками
+            a--;
+            Money mn = ToGrivna(a); 
+            return mn;
         }
     }
     internal class Program
     {
         static void Main(string[] args)
         {
+            //double a = 1234567890.75456756789890000000001; // * 100
+            //string s = a.ToString();
+            //s.Substring(0, s.IndexOf('.'));
+            //if s.IndexOf('.') <= 10
+            //else Exception
+            //int b1 = (int)a;
+
+            //Console.WriteLine(a % 1);
+            //int b = (int)((a % 1) * 100);
+            //Console.WriteLine(b);
+
+            //int c = (int)a;
+            //Console.WriteLine(c);
+
+            //string s = a.ToString();
+            //if (s.IndexOf('.') > 10)
+            //{
+            //    Console.WriteLine("False");
+            //}
+            //else if (s.IndexOf('.') <= 10) // -2147483648 до 2147483647 
+            //{
+            //    string str = s.Substring(0, s.IndexOf('.'));
+            //    double b = double.Parse(str);
+            //    if (b < 2147483647)
+            //    {
+            //        Console.WriteLine("True");
+            //    }
+            //    else
+            //    {
+            //        Console.WriteLine("False");
+            //    }
+            //}
+
+
+
             Money m1;
             Money m2;
             int v1, v2;
+            double val;
             int menu;
             do
             {
@@ -192,6 +345,10 @@ namespace Temat_11pd
                 Console.WriteLine("10. Check the -- operator");
                 Console.WriteLine("11. Count Kopeykas from value | Extra");
                 Console.WriteLine("12. Convert to Money object from value | Extra");
+                Console.WriteLine("13. Convert double to Money object and add to Money object | Extra");
+                Console.WriteLine("14. Convert double to Money object and deduct it from Money object | Extra");
+                Console.WriteLine("15. Multiply a Money class object by a double value | Extra");
+                Console.WriteLine("16. Divide a Money class object by a double value | Extra");
                 Console.Write("0. Exit\nChoice: ");
                 menu = int.Parse(Console.ReadLine());
 
@@ -423,7 +580,8 @@ namespace Temat_11pd
                             Console.WriteLine("\n\tThe objects is created, now let's try to add one kopeyka.");
                             try
                             {
-                                Console.WriteLine($"\n\tResult: {m1++}");
+                                m1++;
+                                Console.WriteLine($"\n\tResult: {m1}");
                             }
                             catch (Exception ex)
                             {
@@ -448,7 +606,8 @@ namespace Temat_11pd
                             Console.WriteLine("\n\tThe objects is created, now let's try to deduct one kopeyka.");
                             try
                             {
-                                Console.WriteLine($"\n\tResult: {m1--}");
+                                m1--;
+                                Console.WriteLine($"\n\tResult: {m1}");
                             }
                             catch (Exception ex)
                             {
@@ -493,8 +652,97 @@ namespace Temat_11pd
                         }
                         break;
 
+                    case 13:
+                        try
+                        {
+                            Console.WriteLine("\n\tMoney object");
+                            Console.Write("Input integer value for grivna: ");
+                            v1 = int.Parse(Console.ReadLine());
+                            Console.Write("Input integer value for kopeyka: ");
+                            v2 = int.Parse(Console.ReadLine());
+                            m1 = new Money(v1, v2);
+
+                            Console.WriteLine("\n\tDouble value object");
+                            Console.Write("Input double value to convert: ");
+                            val = double.Parse(Console.ReadLine());
+                            m2 = Money.DoubleToMoney(val);
+                            Console.WriteLine($"\n\tResult m1 + m2: {m1 + m2}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"\nException: {ex.Message}");
+                        }
+                        break;
+
+                    case 14:
+                        try
+                        {
+                            Console.WriteLine("\n\tMoney object");
+                            Console.Write("Input integer value for grivna: ");
+                            v1 = int.Parse(Console.ReadLine());
+                            Console.Write("Input integer value for kopeyka: ");
+                            v2 = int.Parse(Console.ReadLine());
+                            m1 = new Money(v1, v2);
+
+                            Console.WriteLine("\n\tDouble value object must be LESS than Money object");
+                            Console.Write("Input double value to convert: ");
+                            val = double.Parse(Console.ReadLine());
+                            m2 = Money.DoubleToMoney(val);
+                            Money m = m1 - m2;
+                            Console.WriteLine($"\n\tResult m1 - m2: {m}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"\nException: {ex.Message}");
+                        }
+                        break;
+
+                    case 15:
+                        try
+                        {
+                            Console.WriteLine("\n\tMoney object");
+                            Console.Write("Input integer value for grivna: ");
+                            v1 = int.Parse(Console.ReadLine());
+                            Console.Write("Input integer value for kopeyka: ");
+                            v2 = int.Parse(Console.ReadLine());
+                            m1 = new Money(v1, v2);
+
+                            Console.WriteLine("\n\tDouble value object");
+                            Console.Write("Input double value: ");
+                            val = double.Parse(Console.ReadLine());
+
+                            Console.WriteLine($"\n\tResult m1 * double: {m1 * val}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"\nException: {ex.Message}");
+                        }
+                        break;
+
+                    case 16:
+                        try
+                        {
+                            Console.WriteLine("\n\tMoney object");
+                            Console.Write("Input integer value for grivna: ");
+                            v1 = int.Parse(Console.ReadLine());
+                            Console.Write("Input integer value for kopeyka: ");
+                            v2 = int.Parse(Console.ReadLine());
+                            m1 = new Money(v1, v2);
+
+                            Console.WriteLine("\n\tDouble value object");
+                            Console.Write("Input double value: ");
+                            val = double.Parse(Console.ReadLine());
+
+                            Console.WriteLine($"\n\tResult m1 * double: {m1 / val}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"\nException: {ex.Message}");
+                        }
+                        break;
+
                     default:
-                        if (menu > 12 || menu != 0 || menu < 0) Console.WriteLine("\tWrong menu item selected.\n");
+                        if (menu > 16 || menu != 0 || menu < 0) Console.WriteLine("\tWrong menu item selected.\n");
                         break;
                 }
             } while (menu != 0);
